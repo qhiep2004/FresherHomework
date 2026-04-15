@@ -1,13 +1,23 @@
 using FresherMisa2026.Application;
 using FresherMisa2026.Application.Extensions;
 using FresherMisa2026.Infrastructure;
+using FresherMisa2026.WebAPI.Converters;
 using FresherMisa2026.WebAPI.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+
+  builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new NullableGuidConverter()); //check validate guid để kh bị crash khi gửi "" hoặc null
+    })
+     .ConfigureApiBehaviorOptions(options =>
+     {
+         options.SuppressModelStateInvalidFilter = true; 
+     });
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 //builder.Services.AddOpenApi();
 //Swagger

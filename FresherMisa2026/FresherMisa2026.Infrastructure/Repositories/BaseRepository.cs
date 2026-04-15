@@ -191,6 +191,7 @@ namespace FresherMisa2026.Infrastructure.Repositories
         /// <param name="entity">Thông tin bản ghi</param>
         /// <returns>Số bản ghi thêm mới</returns>
         /// CREATED BY: DVHAI (11/07/2021)
+        /// 
         public async Task<int> InsertAsync(TEntity entity)
         {
             var rowAffects = 0;

@@ -3,6 +3,7 @@ using FresherMisa2026.Application.Interfaces.Repositories;
 using FresherMisa2026.Application.Interfaces.Services;
 using FresherMisa2026.Entities;
 using FresherMisa2026.Entities.Department;
+using FresherMisa2026.Entities.Employee;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -35,6 +36,24 @@ namespace FresherMisa2026.Application.Services
             return department;
         }
 
+        public async Task<IEnumerable<Employee>> GetEmployeesByDepartmentCode(string code)
+        {
+            var department = await _deptRepository.GetEmployeesByDepartmentCode(code);
+            if (department == null)
+                throw new Exception("department is null");
+
+            return department;
+        }
+
+        public async Task<int> GetEmployeeCountByDepartmentCode(string code)
+        {
+            var department = await _deptRepository.GetEmployeeCountByDepartmentCode(code);
+            if (department == null)
+                throw new Exception("department is null");
+
+            return department;
+        }
+
         #region OVERRIDE METHODS
         protected override async Task<bool> ValidateBeforeDeleteAsync(Guid entityId)
         {
@@ -47,7 +66,7 @@ namespace FresherMisa2026.Application.Services
         /// <summary>
         /// Validate tùy chỉnh cho Department
         /// </summary>
-        protected override List<ValidationError> ValidateCustom(Department department)
+        protected override async Task<List<ValidationError>> ValidateCustomAsync(Department department)
         {
             var errors = new List<ValidationError>();
 
@@ -59,6 +78,7 @@ namespace FresherMisa2026.Application.Services
 
             return errors;
         }
+
         #endregion OVERRIDE METHODS
     }
 }

@@ -2,6 +2,7 @@ using FresherMisa2026.Application.Interfaces.Services;
 using FresherMisa2026.Entities;
 using FresherMisa2026.Entities.Enums;
 using Microsoft.AspNetCore.Mvc;
+using MySqlConnector;
 
 namespace FresherMisa2026.WebAPI.Controllers
 {
@@ -97,9 +98,23 @@ namespace FresherMisa2026.WebAPI.Controllers
 
                 return StatusCode((int)ResponseCode.Created, response);
             }
+            catch (MySqlException ex) when (ex.Number == 1062)
+            {
+                return BadRequest(new ServiceResponse
+                {
+                    IsSuccess = false,
+                    Code = (int)ResponseCode.BadRequest,
+                    UserMessage = $"Mã đã tồn tại trong hệ thống"
+                });
+            }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return BadRequest(new ServiceResponse
+                {
+                    IsSuccess = false,
+                    Code = (int)ResponseCode.BadRequest,
+                    UserMessage = ex.Message
+                });
             }
         }
 

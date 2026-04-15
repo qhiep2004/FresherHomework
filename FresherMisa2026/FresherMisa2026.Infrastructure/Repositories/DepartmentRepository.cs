@@ -2,6 +2,7 @@
 using FresherMisa2026.Application.Extensions;
 using FresherMisa2026.Application.Interfaces.Repositories;
 using FresherMisa2026.Entities.Department;
+using FresherMisa2026.Entities.Employee;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -34,6 +35,41 @@ namespace FresherMisa2026.Infrastructure.Repositories
                 {"@DepartmentCode", code }
             };
             return await _dbConnection.QueryFirstOrDefaultAsync<Department>(query, @param, commandType: System.Data.CommandType.Text);
+        }
+        /// <summary>
+        /// lay danh sách nhân viên theo mã phòng ban
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<Employee>> GetEmployeesByDepartmentCode(string code)
+        {
+            var sql = @"SELECT e.* FROM Employee e
+                INNER JOIN Department d ON e.DepartmentID = d.DepartmentID
+                WHERE d.DepartmentCode = @DepartmentCode";
+
+            var param = new Dictionary<string, object>
+    {
+        { "@DepartmentCode", code }
+    };
+            return await _dbConnection.QueryAsync<Employee>(sql, param);
+        }
+        /// <summary>
+        /// đếm sl nv trong phòng ban theo mã
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+
+        public async Task<int> GetEmployeeCountByDepartmentCode(string code)
+        {
+            var sql = @"SELECT COUNT(*) FROM Employee e
+                INNER JOIN Department d ON e.DepartmentID = d.DepartmentID
+                WHERE d.DepartmentCode = @DepartmentCode";
+
+            var param = new Dictionary<string, object>
+    {
+        { "@DepartmentCode", code }
+    };
+            return await _dbConnection.ExecuteScalarAsync<int>(sql, param);
         }
     }
 }

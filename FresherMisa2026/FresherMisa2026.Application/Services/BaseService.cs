@@ -122,7 +122,7 @@ namespace FresherMisa2026.Application.Services
         /// <param name="entity">Thực thể</param>
         /// <returns>Danh sách lỗi validate</returns>
         /// CREATED BY: DVHAI (07/07/2021)
-        private List<ValidationError> Validate(TEntity entity)
+        private async Task<List<ValidationError>> ValidateAsync(TEntity entity)
         {
             var errors = new List<ValidationError>();
             var properties = GetCachedProperties(entity.GetType());
@@ -141,7 +141,7 @@ namespace FresherMisa2026.Application.Services
             }
 
             //2. Validate tùy chỉnh từng màn hình
-            var customErrors = ValidateCustom(entity);
+            var customErrors = await ValidateCustomAsync(entity);
             errors.AddRange(customErrors);
 
             return errors;
@@ -165,10 +165,21 @@ namespace FresherMisa2026.Application.Services
             //3. Tên hiển thị
             var propertyDisplayName = typeof(TEntity).GetColumnDisplayName(propertyName);
 
-            if (propertyValue == null || string.IsNullOrEmpty(propertyValue.ToString()))
-            {
+            // Check null
+            if (propertyValue == null)
                 return new ValidationError(propertyName, $"Trường {propertyDisplayName} bắt buộc nhập");
-            }
+
+            // Check Guid / Guid? rỗng
+            if (propertyValue is Guid guid && guid == Guid.Empty)
+                return new ValidationError(propertyName, $"Trường {propertyDisplayName} bắt buộc nhập");
+
+            // Check Guid? (nullable Guid)
+            if (propertyValue is Guid nullableGuid && nullableGuid == Guid.Empty)
+                return new ValidationError(propertyName, $"Trường {propertyDisplayName} bắt buộc nhập");
+
+            // Check string rỗng
+            if (string.IsNullOrEmpty(propertyValue.ToString()))
+                return new ValidationError(propertyName, $"Trường {propertyDisplayName} bắt buộc nhập");
 
             return null;
         }
@@ -179,7 +190,7 @@ namespace FresherMisa2026.Application.Services
         /// <param name="entity">Thực thể</param>
         /// <returns>Danh sách lỗi tùy chỉnh</returns>
         /// CREATED BY: DVHAI (07/07/2021)
-        protected virtual List<ValidationError> ValidateCustom(TEntity entity)
+        protected virtual async Task<List<ValidationError>> ValidateCustomAsync(TEntity entity)
         {
             return new List<ValidationError>();
         }
@@ -193,10 +204,12 @@ namespace FresherMisa2026.Application.Services
         /// CREATED BY: DVHAI (11/07/2021)
         public async Task<ServiceResponse> InsertAsync(TEntity entity)
         {
+            
+
             entity.State = ModelSate.Add;
 
             //1. Validate tất cả các trường nếu được gắn thẻ
-            var errors = Validate(entity);
+            var errors = await ValidateAsync(entity);
 
             //2. Sử lí lỗi tương ứng
             if (errors.Count == 0)
@@ -230,7 +243,7 @@ namespace FresherMisa2026.Application.Services
             entity.State = ModelSate.Update;
 
             //2. Validate tất cả các trường nếu được gắn thẻ
-            var errors = Validate(entity);
+            var errors = await ValidateAsync(entity);
             
             if (errors.Count == 0)
             {

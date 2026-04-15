@@ -11,6 +11,7 @@ namespace FresherMisa2026.WebAPI.Controllers
     public class DepartmentsController : BaseController<Department>
     {
         private readonly IDepartmentSerice _departmentSerice;
+        //private readonly IEmployeeService _employeeService;
 
         public DepartmentsController(
             IDepartmentSerice departmentSerice) : base(departmentSerice)
@@ -33,5 +34,20 @@ namespace FresherMisa2026.WebAPI.Controllers
 
             return response;
         }
+
+        [HttpGet("{code}/employees")]
+        public async Task<IActionResult> GetEmployees(string code)
+        {
+            var employees = await _departmentSerice.GetEmployeesByDepartmentCode(code);
+            return Ok(employees);
+        }
+
+        [HttpGet("{code}/employee-count")]
+        public async Task<IActionResult> GetEmployeeCount(string code)
+        {
+            var count = await _departmentSerice.GetEmployeeCountByDepartmentCode(code);
+            return Ok(new { count });
+        }
+
     }
 }
