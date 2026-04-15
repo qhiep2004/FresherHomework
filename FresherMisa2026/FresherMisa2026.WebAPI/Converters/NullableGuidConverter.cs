@@ -7,18 +7,27 @@ namespace FresherMisa2026.WebAPI.Converters
     {
         public override Guid? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
+            if (reader.TokenType == JsonTokenType.Null)
+                return null;
+
             var value = reader.GetString();
 
-            if (string.IsNullOrEmpty(value))
-                return Guid.Empty; // ""  Guid.Empty để ValidateRequired bắt
+            if (string.IsNullOrWhiteSpace(value))
+                return null;                    // → sẽ vào Required
 
-            if (Guid.TryParse(value, out var guid))
+            if (Guid.TryParse(value.Trim(), out var guid))
                 return guid;
 
-            return Guid.Empty; // không hợp lệ  Guid.Empty
+            // Sai định dạng → trả về một giá trị đặc biệt để sau này phân biệt
+            return Guid.Empty;   // Chúng ta sẽ xử lý riêng ở Validate
         }
 
         public override void Write(Utf8JsonWriter writer, Guid? value, JsonSerializerOptions options)
-            => writer.WriteStringValue(value?.ToString());
+        {
+            if (value.HasValue && value.Value != Guid.Empty)
+                writer.WriteStringValue(value.Value.ToString("D"));
+            else
+                writer.WriteNullValue();
+        }
     }
 }

@@ -139,7 +139,9 @@ namespace FresherMisa2026.Application.Services
                     }
                 }
             }
-
+            // Validate định dạng GUID (sai format)
+            var formatErrors = ValidateGuidFormats(entity);
+            errors.AddRange(formatErrors);
             //2. Validate tùy chỉnh từng màn hình
             var customErrors = await ValidateCustomAsync(entity);
             errors.AddRange(customErrors);
@@ -154,36 +156,85 @@ namespace FresherMisa2026.Application.Services
         /// <param name="propertyInfo">Thuộc tính của thực thể</param>
         /// <returns>Lỗi validate hoặc null nếu hợp lệ</returns>
         /// CREATED BY: DVHAI (07/07/2021)
-        private ValidationError? ValidateRequired(TEntity entity, PropertyInfo propertyInfo)
+        /// <summary>
+        /// Validate bắt buộc nhập
+        /// </summary>
+        private ValidationError? ValidateRequired(TEntity entity,PropertyInfo propertyInfo)
         {
-            //1. Tên trường
             var propertyName = propertyInfo.Name;
-
-            //2. Giá trị
             var propertyValue = propertyInfo.GetValue(entity);
+            var propertyDisplayName =
+                typeof(TEntity).GetColumnDisplayName(propertyName)
+                ?? propertyName;
 
-            //3. Tên hiển thị
-            var propertyDisplayName = typeof(TEntity).GetColumnDisplayName(propertyName);
-
-            // Check null
+            // 1. Null
             if (propertyValue == null)
-                return new ValidationError(propertyName, $"Trường {propertyDisplayName} bắt buộc nhập");
+            {
+                return new ValidationError(
+                    propertyName,
+                    $"Trường {propertyDisplayName} bắt buộc nhập");
+            }
 
-            // Check Guid / Guid? rỗng
-            if (propertyValue is Guid guid && guid == Guid.Empty)
-                return new ValidationError(propertyName, $"Trường {propertyDisplayName} bắt buộc nhập");
+            // 2. Guid (bao gồm Guid?)
+            if (propertyInfo.PropertyType == typeof(Guid) ||
+                propertyInfo.PropertyType == typeof(Guid?))
+            {
+                var guidValue = (Guid?)propertyValue;
 
-            // Check Guid? (nullable Guid)
-            if (propertyValue is Guid nullableGuid && nullableGuid == Guid.Empty)
-                return new ValidationError(propertyName, $"Trường {propertyDisplayName} bắt buộc nhập");
+                // Chỉ check null
+                if (!guidValue.HasValue)
+                {
+                    return new ValidationError(
+                        propertyName,
+                        $"Trường {propertyDisplayName} bắt buộc nhập");
+                }
 
-            // Check string rỗng
-            if (string.IsNullOrEmpty(propertyValue.ToString()))
-                return new ValidationError(propertyName, $"Trường {propertyDisplayName} bắt buộc nhập");
+                // Nếu = Empty → để format xử lý
+                return null;
+            }
+
+            // 3. String
+            if (propertyValue is string str &&
+                string.IsNullOrWhiteSpace(str))
+            {
+                return new ValidationError(
+                    propertyName,
+                    $"Trường {propertyDisplayName} bắt buộc nhập");
+            }
 
             return null;
         }
+        /// <summary>
+        /// Validate định dạng GUID
+        /// </summary>
+        private List<ValidationError> ValidateGuidFormats(TEntity entity)
+        {
+            var errors = new List<ValidationError>();
+            var properties = GetCachedProperties(entity.GetType());
 
+            foreach (var property in properties)
+            {
+                if (property.PropertyType != typeof(Guid) &&
+                    property.PropertyType != typeof(Guid?))
+                    continue;
+
+                var value = property.GetValue(entity);
+                var displayName =
+                    typeof(TEntity)
+                    .GetColumnDisplayName(property.Name)
+                    ?? property.Name;
+
+                if (value is Guid guid &&
+                    guid == Guid.Empty)
+                {
+                    errors.Add(new ValidationError(
+                        property.Name,
+                        $"Trường {displayName} không đúng định dạng GUID"));
+                }
+            }
+
+            return errors;
+        }
         /// <summary>
         /// Validate từng màn hình
         /// </summary>
