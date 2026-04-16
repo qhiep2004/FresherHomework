@@ -148,7 +148,7 @@ namespace FresherMisa2026.Infrastructure.Repositories
 
             sw.Stop();
             // Log rõ để so sánh có/không index
-            var icon = sw.ElapsedMilliseconds < 50 ? "✅" : sw.ElapsedMilliseconds < 200 ? "⚠️" : "❌";
+            var icon = sw.ElapsedMilliseconds < 50 ? "" : sw.ElapsedMilliseconds < 200 ? "⚠️" : "❌";
             Console.WriteLine($"""
     ───────────────────────────────────────
     {icon} FilterEmployee
