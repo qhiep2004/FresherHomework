@@ -9,6 +9,10 @@ namespace FresherMisa2026.Entities.Department
     [ConfigTable("Department", false, "DepartmentCode")]
     public class Department : BaseModel
     {
+        public Department(){
+            //tự sinh ra ID mới khi khởi tạo đối tượng, tránh trường hợp quên gán ID dẫn đến lỗi
+            DepartmentID = Guid.NewGuid();
+        }
         /// <summary>
         /// ID phòng ban
         /// </summary>
