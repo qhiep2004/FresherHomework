@@ -15,6 +15,12 @@ namespace FresherMisa2026.Infrastructure.Repositories
         {
         }
         // Override InsertAsync để bắt lỗi duplicate
+        /// <summary>
+        /// thêm 2 nv giống nhau cùng 1 time sẽ bị lỗi duplicate key, bắt lỗi này để trả về thông báo dễ hiểu hơn
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public new async Task<int> InsertAsync(Employee entity)
         {
             try
@@ -26,7 +32,11 @@ namespace FresherMisa2026.Infrastructure.Repositories
                 throw new Exception($"Mã nhân viên {entity.EmployeeCode} đã tồn tại");
             }
         }
-
+        /// <summary>
+        /// lấy ds nhân viên theo mã nhân viên 
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
         public async Task<Employee> GetEmployeeByCode(string code)
         {
             string query = SQLExtension.GetQuery("Employee.GetByCode");
@@ -36,7 +46,11 @@ namespace FresherMisa2026.Infrastructure.Repositories
             };
             return await _dbConnection.QueryFirstOrDefaultAsync<Employee>(query, param, commandType: System.Data.CommandType.Text);
         }
-
+        /// <summary>
+        /// lấy ds nhân viên theo id phòng ban
+        /// </summary>
+        /// <param name="departmentId"></param>
+        /// <returns></returns>
         public async Task<IEnumerable<Employee>> GetEmployeesByDepartmentId(Guid departmentId)
         {
             string query = SQLExtension.GetQuery("Employee.GetByDepartmentId");
@@ -46,7 +60,11 @@ namespace FresherMisa2026.Infrastructure.Repositories
             };
             return await _dbConnection.QueryAsync<Employee>(query, param, commandType: System.Data.CommandType.Text);
         }
-
+        /// <summary>
+        /// lấy ds nhân viên theo id vị trí 
+        /// </summary>
+        /// <param name="positionId"></param>
+        /// <returns></returns>
         public async Task<IEnumerable<Employee>> GetEmployeesByPositionId(Guid positionId)
         {
             string query = SQLExtension.GetQuery("Employee.GetByPositionId");
@@ -63,53 +81,20 @@ namespace FresherMisa2026.Infrastructure.Repositories
         /// <returns></returns>
         public async Task<IEnumerable<Employee>> FilterAsync(EmployeeFilterRequest filter)
         {
-            var conditions = new List<string>();
             var parameters = new DynamicParameters();
+            parameters.Add("p_DepartmentId", filter.DepartmentId);
+            parameters.Add("p_PositionId", filter.PositionId);
+            parameters.Add("p_SalaryFrom", filter.SalaryFrom);
+            parameters.Add("p_SalaryTo", filter.SalaryTo);
+            parameters.Add("p_Gender", filter.Gender);
+            parameters.Add("p_HireDateFrom", filter.HireDateFrom);
+            parameters.Add("p_HireDateTo", filter.HireDateTo);
 
-            if (filter.DepartmentId.HasValue)
-            {
-                conditions.Add("DepartmentID = @DepartmentId");
-                parameters.Add("DepartmentId", filter.DepartmentId);
-            }
-            if (filter.PositionId.HasValue)
-            {
-                conditions.Add("PositionID = @PositionId");
-                parameters.Add("PositionId", filter.PositionId);
-            }
-            if (filter.SalaryFrom.HasValue)
-            {
-                conditions.Add("Salary >= @SalaryFrom");
-                parameters.Add("SalaryFrom", filter.SalaryFrom);
-            }
-            if (filter.SalaryTo.HasValue)
-            {
-                conditions.Add("Salary <= @SalaryTo");
-                parameters.Add("SalaryTo", filter.SalaryTo);
-            }
-            if (filter.Gender.HasValue)
-            {
-                conditions.Add("Gender = @Gender");
-                parameters.Add("Gender", filter.Gender);
-            }
-            if (filter.HireDateFrom.HasValue)
-            {
-                conditions.Add("HireDate >= @HireDateFrom");
-                parameters.Add("HireDateFrom", filter.HireDateFrom);
-            }
-            if (filter.HireDateTo.HasValue)
-            {
-                conditions.Add("HireDate <= @HireDateTo");
-                parameters.Add("HireDateTo", filter.HireDateTo);
-            }
-
-            var where = conditions.Count > 0
-                ? "WHERE " + string.Join(" AND ", conditions)
-                : "";
-
-            var sql = $"SELECT * FROM Employee {where}";
-
-        
-            return await _dbConnection.QueryAsync<Employee>(sql, parameters);
+            return await _dbConnection.QueryAsync<Employee>(
+                "sp_FilterEmployee",
+                parameters,
+                commandType: System.Data.CommandType.StoredProcedure
+            );
         }
     }
 }

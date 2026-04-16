@@ -35,7 +35,12 @@ namespace FresherMisa2026.Application.Services
 
             return department;
         }
-
+        /// <summary>
+        /// lấy ds nhân viên theo mã phòng ban
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public async Task<IEnumerable<Employee>> GetEmployeesByDepartmentCode(string code)
         {
             var department = await _deptRepository.GetEmployeesByDepartmentCode(code);
@@ -44,6 +49,12 @@ namespace FresherMisa2026.Application.Services
 
             return department;
         }
+        /// <summary>
+        /// đếm sl nv theo mã phòng ban
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
 
         public async Task<int> GetEmployeeCountByDepartmentCode(string code)
         {

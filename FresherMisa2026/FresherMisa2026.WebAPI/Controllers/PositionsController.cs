@@ -15,7 +15,11 @@ namespace FresherMisa2026.WebAPI.Controllers
         {
             _positionService = positionService;
         }
-
+        /// <summary>
+        /// tìm kiếm vị trí theo mã vị trí
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
         [HttpGet("Code/{code}")]
         public async Task<ActionResult<ServiceResponse>> GetByCode(string code)
         {

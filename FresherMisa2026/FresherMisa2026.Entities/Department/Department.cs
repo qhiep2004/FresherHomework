@@ -24,6 +24,7 @@ namespace FresherMisa2026.Entities.Department
         /// <summary>
         /// Tên phòng ban
         /// </summary>
+         [IRequired]
         public string DepartmentName { get; set; }
 
         /// <summary>

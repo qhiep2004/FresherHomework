@@ -12,7 +12,11 @@ namespace FresherMisa2026.Infrastructure.Repositories
         public PositionRepository(IConfiguration configuration) : base(configuration)
         {
         }
-
+        /// <summary>
+        /// lấy danh sách vị trí theo mã vị trí
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
         public async Task<Position> GetPositionByCode(string code)
         {
             string query = SQLExtension.GetQuery("Position.GetByCode");

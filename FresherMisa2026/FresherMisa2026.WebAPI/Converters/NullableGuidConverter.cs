@@ -5,6 +5,13 @@ namespace FresherMisa2026.WebAPI.Converters
 {
     public class NullableGuidConverter : JsonConverter<Guid?>
     {
+        /// <summary>
+        /// validate guid có 3 trường hợp:
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <param name="typeToConvert"></param>
+        /// <param name="options"></param>
+        /// <returns></returns>
         public override Guid? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType == JsonTokenType.Null)

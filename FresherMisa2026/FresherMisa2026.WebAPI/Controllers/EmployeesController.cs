@@ -16,7 +16,11 @@ namespace FresherMisa2026.WebAPI.Controllers
         {
             _employeeService = employeeService;
         }
-
+        /// <summary>
+        /// tìm kiếm nhân viên theo mã nhân viên
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
         [HttpGet("Code/{code}")]
         public async Task<ActionResult<ServiceResponse>> GetByCode(string code)
         {
@@ -26,7 +30,11 @@ namespace FresherMisa2026.WebAPI.Controllers
 
             return response;
         }
-
+        /// <summary>
+        /// lấy ds nhân viên theo id phòng ban
+        /// </summary>
+        /// <param name="departmentId"></param>
+        /// <returns></returns>
         [HttpGet("Department/{departmentId}")]
         public async Task<ActionResult<ServiceResponse>> GetByDepartmentId(Guid departmentId)
         {
@@ -36,6 +44,11 @@ namespace FresherMisa2026.WebAPI.Controllers
 
             return response;
         }
+        /// <summary>
+        /// lấy ds nv theo id vị trí
+        /// </summary>
+        /// <param name="positionId"></param>
+        /// <returns></returns>
 
         [HttpGet("Position/{positionId}")]
         public async Task<ActionResult<ServiceResponse>> GetByPositionId(Guid positionId)
@@ -46,6 +59,11 @@ namespace FresherMisa2026.WebAPI.Controllers
 
             return response;
         }
+        /// <summary>
+        /// bộ lọc dữ liệu in ra ds nv thỏa mãn các điều kiện của filter
+        /// </summary>
+        /// <param name="filter"></param>
+        /// <returns></returns>
         [HttpGet("Filter")]
         public async Task<ActionResult<ServiceResponse>> Filter([FromQuery] EmployeeFilterRequest filter)
         {
