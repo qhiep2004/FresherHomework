@@ -7,6 +7,10 @@ namespace FresherMisa2026.Entities.Position
     [ConfigTable("Position", false, "PositionCode")]
     public class Position : BaseModel
     {
+        public Position() {
+            //tự sinh id nếu không có
+            PositionID = Guid.NewGuid();
+        }
         /// <summary>
         /// id vị trí 
         /// </summary>

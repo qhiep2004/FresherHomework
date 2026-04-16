@@ -7,6 +7,10 @@ namespace FresherMisa2026.Entities.Employee
     [ConfigTable("Employee", false, "EmployeeCode")]
     public class Employee : BaseModel
     {
+        public Employee() {
+            //tự sinh id nếu không có
+            EmployeeID =Guid.NewGuid();
+        }
         /// <summary>
         /// id nhân viên
         /// </summary>

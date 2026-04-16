@@ -68,14 +68,14 @@ namespace FresherMisa2026.Application.Services
             //    errors.Add(new ValidationError("EmployeeName", "Tên nhân viên không được để trống"));
             //}
             // 1. Mã nhân viên không được trùng lặp
-            //if (!string.IsNullOrEmpty(employee.EmployeeCode))
-            //{
-            //    var existingEmployee = await _employeeRepository.GetEmployeeByCode(employee.EmployeeCode);
-            //    if (existingEmployee != null && existingEmployee.EmployeeID != employee.EmployeeID)
-            //    {
-            //        errors.Add(new ValidationError("EmployeeCode", $"Mã nhân viên {employee.EmployeeCode} đã tồn tại"));
-            //    }
-            //}
+            if (!string.IsNullOrEmpty(employee.EmployeeCode))
+            {
+                var existingEmployee = await _employeeRepository.GetEmployeeByCode(employee.EmployeeCode);
+                if (existingEmployee != null && existingEmployee.EmployeeID != employee.EmployeeID)
+                {
+                    errors.Add(new ValidationError("EmployeeCode", $"Mã nhân viên {employee.EmployeeCode} đã tồn tại"));
+                }
+            }
 
             // 2. Email phải đúng định dạng
             if (!string.IsNullOrEmpty(employee.Email))
