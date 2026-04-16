@@ -31,5 +31,13 @@ namespace FresherMisa2026.Entities
         /// </summary>
         public string SearchFields { get; set; }
     }
+    /// <summary>
+    /// tạo riêng để phân trang cho filter thôi . kh cần từ khóa search và field
+    /// </summary>
+    public class PagingOnlyRequest
+    {
+        public int PageIndex { get; set; } 
+        public int PageSize { get; set; } 
+    }
 
 }

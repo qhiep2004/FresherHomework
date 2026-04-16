@@ -72,7 +72,20 @@ namespace FresherMisa2026.WebAPI.Controllers
             response.IsSuccess = true;
             return response;
         }
-
+        /// <summary>
+        /// phân trang cho bộ lọc filter
+        /// </summary>
+        /// <param name="paging"></param>
+        /// <param name="filter"></param>
+        /// <returns></returns>
+        [HttpGet("filter-paging")]
+        public async Task<IActionResult> FilterPaging(
+    [FromQuery] PagingOnlyRequest paging,
+    [FromQuery] EmployeeFilterRequest filter)
+        {
+            var result = await _employeeService.FilterPagingAsync(paging, filter);
+            return Ok(result);
+        }
 
     }
 }

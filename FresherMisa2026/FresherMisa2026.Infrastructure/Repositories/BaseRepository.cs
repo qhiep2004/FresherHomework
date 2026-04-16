@@ -3,11 +3,13 @@ using FresherMisa2026.Application.Interfaces;
 using FresherMisa2026.Entities;
 using FresherMisa2026.Entities.Department;
 using FresherMisa2026.Entities.Extensions;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using MySqlConnector;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -22,23 +24,52 @@ namespace FresherMisa2026.Infrastructure.Repositories
     public class BaseRepository<TEntity> : IBaseRepository<TEntity>, IDisposable where TEntity : BaseModel
     {
         //Properties
-        string _connectionString = string.Empty;
-        IConfiguration _configuration;
-        protected IDbConnection _dbConnection = null;
-        protected string _tableName;
-        public Type _modelType = null;
+        //string _connectionString = string.Empty;
+        //IConfiguration _configuration;
+        //protected IDbConnection _dbConnection = null;
+        //protected string _tableName;
+        //public Type _modelType = null;
+        // ── fields ──────────────────────────────────────────────
+        private readonly string _connectionString;
+        private readonly IMemoryCache _cache;
+        protected readonly string _tableName;
+        protected readonly Type _modelType;
 
+        // Cache duration: 5 phút theo yêu cầu
+        private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
+
+        // Cache key helpers – dùng tên bảng để tránh collision
+        private string AllEntitiesCacheKey => $"cache_{_tableName}_all";
+        private string EntityByIdCacheKey(Guid id) => $"cache_{_tableName}_{id}";
 
         //Constructor
-        public BaseRepository(IConfiguration configuration)
+        public BaseRepository(IConfiguration configuration , IMemoryCache cache)
         {
-            _configuration = configuration;
-            _connectionString = _configuration.GetConnectionString("DefaultConnection")!;
-            _dbConnection = new MySqlConnection(_connectionString);
+            //_configuration = configuration;
+            //_connectionString = _configuration.GetConnectionString("DefaultConnection")!;
+            //_dbConnection = new MySqlConnection(_connectionString);
+            //_modelType = typeof(TEntity);
+            //_tableName = _modelType.GetTableName();
+            _connectionString = configuration.GetConnectionString("DefaultConnection")!;
+            _cache = cache;
             _modelType = typeof(TEntity);
             _tableName = _modelType.GetTableName();
         }
 
+        /// <summary>
+        /// Tạo connection mới mỗi lần dùng.
+        /// MySqlConnector tự quản lý connection pool bên dưới.
+        /// </summary>
+        protected MySqlConnection CreateConnection() => new(_connectionString);
+
+        /// <summary>
+        /// Xóa cache liên quan đến một entity cụ thể
+        /// </summary>
+        private void InvalidateCache(Guid entityId)
+        {
+            _cache.Remove(EntityByIdCacheKey(entityId));
+            _cache.Remove(AllEntitiesCacheKey);
+        }
 
         /// <summary>
         /// Dispose connection
@@ -46,30 +77,30 @@ namespace FresherMisa2026.Infrastructure.Repositories
         /// Created By: dvhai (09/04/2026)
         public void Dispose()
         {
-            if (_dbConnection != null && _dbConnection.State == ConnectionState.Open)
-            {
-                _dbConnection.Close();
-                _dbConnection.Dispose();
-            }
+            //if (_dbConnection != null && _dbConnection.State == ConnectionState.Open)
+            //{
+            //    _dbConnection.Close();
+            //    _dbConnection.Dispose();
+            //}
         }
 
         /// <summary>
         /// Mở kết nối database
         /// </summary>
-        private async Task OpenConnectionAsync()
-        {
-            if (_dbConnection.State != ConnectionState.Open)
-            {
-                if (_dbConnection is MySqlConnection mySqlConnection)
-                {
-                    await mySqlConnection.OpenAsync();
-                }
-                else
-                {
-                    _dbConnection.Open();
-                }
-            }
-        }
+        //protected async Task OpenConnectionAsync()
+        //{
+        //    if (_dbConnection.State != ConnectionState.Open)
+        //    {
+        //        if (_dbConnection is MySqlConnection mySqlConnection)
+        //        {
+        //            await mySqlConnection.OpenAsync();
+        //        }
+        //        else
+        //        {
+        //            _dbConnection.Open();
+        //        }
+        //    }
+        //}
 
         #region Method Get
         /// <summary>
@@ -89,18 +120,24 @@ namespace FresherMisa2026.Infrastructure.Repositories
         /// CREATED BY: DVHAI (11/07/2021)
         private async Task<IEnumerable<TEntity>> GetEntitiesUsingCommandTextAsync()
         {
-            var query = new StringBuilder($"select * from {_tableName}");
-            int whereCount = 0;
+            // 1. Thử lấy từ cache trước
+            if (_cache.TryGetValue(AllEntitiesCacheKey, out IEnumerable<TEntity>? cached))
+                return cached!;
 
+            // 2. Cache miss → query DB
+            var query = new StringBuilder($"SELECT * FROM {_tableName}");
             if (_modelType.GetHasDeletedColumn())
-            {
-                whereCount++;
-                query.Append($" where IsDeleted = FALSE");
-            }
+                query.Append(" WHERE IsDeleted = FALSE");
 
-            var entities = await _dbConnection.QueryAsync<TEntity>(query.ToString(), commandType: CommandType.Text);
+            IEnumerable<TEntity> result;
+            // "using" đảm bảo connection tự đóng & trả về pool
+            await using var conn = CreateConnection();
+            result = (await conn.QueryAsync<TEntity>(
+                query.ToString(), commandType: CommandType.Text)).ToList();
 
-            return entities.ToList();
+            // 3. Lưu vào cache 5 phút
+            _cache.Set(AllEntitiesCacheKey, result, CacheDuration);
+            return result;
         }
 
         /// <summary>
@@ -121,30 +158,30 @@ namespace FresherMisa2026.Infrastructure.Repositories
         /// <returns></returns>
         private async Task<TEntity> GetEntitieByIdUsingCommandTextAsync(string id)
         {
-            var query = new StringBuilder($"select * from {_tableName}");
+            var cacheKey = EntityByIdCacheKey(Guid.Parse(id));
+            if (_cache.TryGetValue(cacheKey, out TEntity? cached))
+                return cached!;
+
+            var query = new StringBuilder($"SELECT * FROM {_tableName}");
             int whereCount = 0;
 
-            Func<StringBuilder, bool> AppendWhere = (query) => { if (whereCount == 0) query.Append(" where "); return true; };
-
             var primaryKey = _modelType.GetKeyName();
-
             if (primaryKey != null)
             {
-                AppendWhere(query);
-                query.Append($"{primaryKey} = @Id");
+                query.Append($" WHERE {primaryKey} = @Id");
                 whereCount++;
             }
-
             if (_modelType.GetHasDeletedColumn())
-            {
-                AppendWhere(query);
-                query.Append("IsDeleted = FALSE");
-                whereCount++;
-            }
+                query.Append(whereCount == 0 ? " WHERE IsDeleted = FALSE" : " AND IsDeleted = FALSE");
 
-            var entities = await _dbConnection.QueryFirstOrDefaultAsync<TEntity>(query.ToString(), new { Id = id }, commandType: CommandType.Text);
+            await using var conn = CreateConnection();
+            var result = await conn.QueryFirstOrDefaultAsync<TEntity>(
+                query.ToString(), new { Id = id }, commandType: CommandType.Text);
 
-            return entities;
+            if (result != null)
+                _cache.Set(cacheKey, result, CacheDuration);
+
+            return result;
         }
 
         /// <summary>
@@ -155,35 +192,31 @@ namespace FresherMisa2026.Infrastructure.Repositories
         /// CREATED BY: DVHAI (11/07/2021)
         public async Task<int> DeleteAsync(Guid entityId)
         {
-            var rowAffects = 0;
-            await OpenConnectionAsync();
-
-            using (var transaction = _dbConnection.BeginTransaction())
+            await using var conn = CreateConnection();
+            await conn.OpenAsync();
+            await using var transaction = await conn.BeginTransactionAsync();
+            try
             {
-                try
-                {
-                    //1. Lấy tên của khóa chính
-                    var keyName = _modelType.GetKeyName();
+                var keyName = _modelType.GetKeyName();
+                var dynamicParams = new DynamicParameters();
+                dynamicParams.Add($"@v_{keyName}", entityId);
 
-                    var dynamicParams = new DynamicParameters();
-                    dynamicParams.Add($"@v_{keyName}", entityId);
+                var rowAffects = await conn.ExecuteAsync(
+                    $"Proc_Delete{_tableName}ById",
+                    param: dynamicParams,
+                    transaction: transaction,
+                    commandType: CommandType.StoredProcedure);
 
-                    //2. Kết nối tới CSDL:
-                    rowAffects = await _dbConnection.ExecuteAsync($"Proc_Delete{_tableName}ById", param: dynamicParams, transaction: transaction, commandType: CommandType.StoredProcedure);
-
-                    transaction.Commit();
-                }
-                catch
-                {
-                    transaction.Rollback();
-                    throw;
-                }
+                await transaction.CommitAsync();
+                InvalidateCache(entityId);
+                return rowAffects;
             }
-
-            //3. Trả về số bản ghi bị ảnh hưởng
-            return rowAffects;
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
-
 
         /// <summary>
         /// Thêm bản ghi mới
@@ -194,30 +227,28 @@ namespace FresherMisa2026.Infrastructure.Repositories
         /// 
         public async Task<int> InsertAsync(TEntity entity)
         {
-            var rowAffects = 0;
-            await OpenConnectionAsync();
-            
-            using (var transaction = _dbConnection.BeginTransaction())
+            await using var conn = CreateConnection();
+            await conn.OpenAsync();
+            await using var transaction = await conn.BeginTransactionAsync();
+            try
             {
-                try
-                {
-                    //1.Duyệt các thuộc tính trên bản ghi và tạo parameters
-                    var parameters = MappingDbType(entity);
+                var parameters = MappingDbType(entity);
 
-                    //2.Thực hiện thêm bản ghi
-                    rowAffects = await _dbConnection.ExecuteAsync($"Proc_Insert{_tableName}", param: parameters, transaction: transaction, commandType: CommandType.StoredProcedure);
+                var rowAffects = await conn.ExecuteAsync(
+                    $"Proc_Insert{_tableName}",
+                    param: parameters,
+                    transaction: transaction,
+                    commandType: CommandType.StoredProcedure);
 
-                    transaction.Commit();
-                }
-                catch
-                {
-                    transaction.Rollback();
-                    throw;
-                }
+                await transaction.CommitAsync();
+                _cache.Remove(AllEntitiesCacheKey);
+                return rowAffects;
             }
-
-            //3.Trả về số bản ghi thêm mới
-            return rowAffects;
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         /// <summary>
@@ -229,33 +260,30 @@ namespace FresherMisa2026.Infrastructure.Repositories
         /// CREATED BY: DVHAI (11/07/2021)
         public async Task<int> UpdateAsync(Guid entityId, TEntity entity)
         {
-            var rowAffects = 0;
-            await OpenConnectionAsync();
-            
-            using (var transaction = _dbConnection.BeginTransaction())
+            await using var conn = CreateConnection();
+            await conn.OpenAsync();
+            await using var transaction = await conn.BeginTransactionAsync();
+            try
             {
-                try
-                {
-                    //1. Duyệt các thuộc tính trên customer và tạo parameters
-                    var parameters = MappingDbType(entity);
+                var parameters = MappingDbType(entity);
+                var keyName = _modelType.GetKeyName();
+                entity.GetType().GetProperty(keyName)!.SetValue(entity, entityId);
 
-                    //2. Ánh xạ giá trị id
-                    var keyName = _modelType.GetKeyName();
-                    entity.GetType().GetProperty(keyName).SetValue(entity, entityId);
+                var rowAffects = await conn.ExecuteAsync(
+                    $"Proc_Update{_tableName}",
+                    param: parameters,
+                    transaction: transaction,
+                    commandType: CommandType.StoredProcedure);
 
-                    //3. Kết nối tới CSDL:
-                    rowAffects = await _dbConnection.ExecuteAsync($"Proc_Update{_tableName}", param: parameters, transaction: transaction, commandType: CommandType.StoredProcedure);
-
-                    transaction.Commit();
-                }
-                catch
-                {
-                    transaction.Rollback();
-                    throw;
-                }
+                await transaction.CommitAsync();
+                InvalidateCache(entityId);
+                return rowAffects;
             }
-            //4. Trả về dữ liệu
-            return rowAffects;
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         /// <summary>
@@ -273,13 +301,16 @@ namespace FresherMisa2026.Infrastructure.Repositories
             int pageSize,
             int pageIndex,
             string search,
-            List<string> searchFields,
-            string sort)
+            List<string> searchFields,string sort)
         {
+            //  bắt đầu đo thời gian
+            var sw = Stopwatch.StartNew();
+
+
             long total = 0;
             var data = Enumerable.Empty<TEntity>();
 
-            await OpenConnectionAsync();
+            await using var conn = CreateConnection();
 
             string store = string.Format("Proc_{0}_FilterPaging", _tableName);
             var parameters = new DynamicParameters();
@@ -289,11 +320,15 @@ namespace FresherMisa2026.Infrastructure.Repositories
             parameters.Add("@v_sort", sort);
             parameters.Add("@v_searchFields", JsonSerializer.Serialize(searchFields));
 
-            using var reader = await _dbConnection.QueryMultipleAsync(
+            using var reader = await conn.QueryMultipleAsync(
                 new CommandDefinition(store, parameters, commandType: CommandType.StoredProcedure));
 
             data = (await reader.ReadAsync<TEntity>()).ToList();
             total = await reader.ReadFirstAsync<long>();
+
+            // in ra thời gian sau khi query xong
+            sw.Stop();
+            Console.WriteLine($"[PERF] {_tableName}.FilterPaging » {sw.ElapsedMilliseconds}ms | total={total}");
 
             return (total, data);
         }

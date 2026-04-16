@@ -127,7 +127,25 @@ namespace FresherMisa2026.Application.Services
             }
             return errors;
         }
-      
+        /// <summary>
+        /// phân trang cho bộ lọc filter
+        /// </summary>
+        /// <param name="paging"></param>
+        /// <param name="filter"></param>
+        /// <returns></returns>
+        public async Task<ServiceResponse> FilterPagingAsync(PagingOnlyRequest paging, EmployeeFilterRequest filter)
+        {
+            var (total, data) = await _employeeRepository.FilterPagingAsync(paging, filter);
+
+            var response = new PagingResponse<Employee>
+            {
+                Total = total,
+                Data = data.ToList()
+            };
+
+            return CreateSuccessResponse(response);
+        }
+
     }
     
 }

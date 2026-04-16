@@ -25,6 +25,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 //DI
+builder.Services.AddMemoryCache(); // dky cache
 builder.Services.AddApplicationDI();
 builder.Services.AddInfrastructure();
 
@@ -42,7 +43,7 @@ if (app.Environment.IsDevelopment())
 SQLExtension.Initialize();
 
 //Middlewares
-app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseMiddleware<GlobalExceptionMiddleware>(); 
 
 app.UseHttpsRedirection();
 

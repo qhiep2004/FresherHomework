@@ -3,6 +3,7 @@ using FresherMisa2026.Application.Extensions;
 using FresherMisa2026.Application.Interfaces.Repositories;
 using FresherMisa2026.Entities.Department;
 using FresherMisa2026.Entities.Employee;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,7 @@ namespace FresherMisa2026.Infrastructure.Repositories
     /// Created By: dvhai (09/04/2026)
     public class DepartmentRepository : BaseRepository<Department>, IDepartmentRepository
     {
-        public DepartmentRepository(IConfiguration configuration) : base(configuration)
+        public DepartmentRepository(IConfiguration configuration , IMemoryCache cache) : base(configuration, cache)
         {
 
         }
@@ -34,7 +35,8 @@ namespace FresherMisa2026.Infrastructure.Repositories
             {
                 {"@DepartmentCode", code }
             };
-            return await _dbConnection.QueryFirstOrDefaultAsync<Department>(query, @param, commandType: System.Data.CommandType.Text);
+            await using var conn = CreateConnection();
+            return await conn.QueryFirstOrDefaultAsync<Department>(query, @param, commandType: System.Data.CommandType.Text);
         }
         /// <summary>
         /// lay danh sách nhân viên theo mã phòng ban
@@ -51,7 +53,8 @@ namespace FresherMisa2026.Infrastructure.Repositories
     {
         { "@DepartmentCode", code }
     };
-            return await _dbConnection.QueryAsync<Employee>(sql, param);
+            await using var conn = CreateConnection();
+            return await conn.QueryAsync<Employee>(sql, param);
         }
         /// <summary>
         /// đếm sl nv trong phòng ban theo mã
@@ -69,7 +72,8 @@ namespace FresherMisa2026.Infrastructure.Repositories
     {
         { "@DepartmentCode", code }
     };
-            return await _dbConnection.ExecuteScalarAsync<int>(sql, param);
+            await using var conn = CreateConnection();
+            return await conn.ExecuteScalarAsync<int>(sql, param);
         }
     }
 }

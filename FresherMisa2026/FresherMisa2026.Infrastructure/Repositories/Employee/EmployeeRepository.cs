@@ -1,17 +1,21 @@
 using Dapper;
 using FresherMisa2026.Application.Extensions;
 using FresherMisa2026.Application.Interfaces.Repositories;
+using FresherMisa2026.Entities;
 using FresherMisa2026.Entities.DTOs;
 using FresherMisa2026.Entities.Employee;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using MySqlConnector;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection.PortableExecutable;
 
 namespace FresherMisa2026.Infrastructure.Repositories
 {
     public class EmployeeRepository : BaseRepository<Employee>, IEmployeeRepository
     {
-        public EmployeeRepository(IConfiguration configuration) : base(configuration)
+        public EmployeeRepository(IConfiguration configuration , IMemoryCache cache) : base(configuration, cache)
         {
         }
         // Override InsertAsync để bắt lỗi duplicate
@@ -44,7 +48,8 @@ namespace FresherMisa2026.Infrastructure.Repositories
             {
                 {"@EmployeeCode", code }
             };
-            return await _dbConnection.QueryFirstOrDefaultAsync<Employee>(query, param, commandType: System.Data.CommandType.Text);
+            await using var conn = CreateConnection();
+            return await conn.QueryFirstOrDefaultAsync<Employee>(query, param, commandType: System.Data.CommandType.Text);
         }
         /// <summary>
         /// lấy ds nhân viên theo id phòng ban
@@ -58,7 +63,8 @@ namespace FresherMisa2026.Infrastructure.Repositories
             {
                 {"@DepartmentID", departmentId }
             };
-            return await _dbConnection.QueryAsync<Employee>(query, param, commandType: System.Data.CommandType.Text);
+            await using var conn = CreateConnection();
+            return await conn.QueryAsync<Employee>(query, param, commandType: System.Data.CommandType.Text);
         }
         /// <summary>
         /// lấy ds nhân viên theo id vị trí 
@@ -72,7 +78,8 @@ namespace FresherMisa2026.Infrastructure.Repositories
             {
                 {"@PositionID", positionId }
             };
-            return await _dbConnection.QueryAsync<Employee>(query, param, commandType: System.Data.CommandType.Text);
+            await using var conn = CreateConnection();
+            return await conn.QueryAsync<Employee>(query, param, commandType: System.Data.CommandType.Text);
         }
         /// <summary>
         /// lọc nhân viên theo các tiêu chí: phòng ban, chức vụ, mức lương, giới tính, ngày tuyển dụng
@@ -90,11 +97,70 @@ namespace FresherMisa2026.Infrastructure.Repositories
             parameters.Add("p_HireDateFrom", filter.HireDateFrom);
             parameters.Add("p_HireDateTo", filter.HireDateTo);
 
-            return await _dbConnection.QueryAsync<Employee>(
+            // Không cần paging → lấy tất cả
+            parameters.Add("p_PageIndex", 1);
+            parameters.Add("p_PageSize", int.MaxValue);
+            await using var conn = CreateConnection();
+            using (var reader = await conn.QueryMultipleAsync(
+         "sp_FilterEmployee", parameters,
+         commandType: System.Data.CommandType.StoredProcedure))
+            {
+                return (await reader.ReadAsync<Employee>()).ToList();
+            }
+        }
+        /// <summary>
+        /// phân trang cho bộ lọc filter
+        /// </summary>
+        /// <param name="paging"></param>
+        /// <param name="filter"></param>
+        /// <returns></returns>
+        public async Task<(long Total, IEnumerable<Employee> Data)> FilterPagingAsync(
+    PagingOnlyRequest paging, EmployeeFilterRequest filter)
+        {
+
+            var sw = Stopwatch.StartNew();
+            await using var conn = CreateConnection();
+
+            var parameters = new DynamicParameters();
+
+            // Filter params
+            parameters.Add("p_DepartmentId", filter.DepartmentId);
+            parameters.Add("p_PositionId", filter.PositionId);
+            parameters.Add("p_SalaryFrom", filter.SalaryFrom);
+            parameters.Add("p_SalaryTo", filter.SalaryTo);
+            parameters.Add("p_Gender", filter.Gender);
+            parameters.Add("p_HireDateFrom", filter.HireDateFrom);
+            parameters.Add("p_HireDateTo", filter.HireDateTo);
+
+            // Paging params
+            parameters.Add("p_PageIndex", paging.PageIndex);
+            parameters.Add("p_PageSize", paging.PageSize);
+
+            using var reader = await conn.QueryMultipleAsync(
                 "sp_FilterEmployee",
                 parameters,
                 commandType: System.Data.CommandType.StoredProcedure
             );
+
+            var data = (await reader.ReadAsync<Employee>()).ToList();
+            var total = await reader.ReadFirstAsync<long>();
+
+
+            sw.Stop();
+            // Log rõ để so sánh có/không index
+            var icon = sw.ElapsedMilliseconds < 50 ? "✅" : sw.ElapsedMilliseconds < 200 ? "⚠️" : "❌";
+            Console.WriteLine($"""
+    ───────────────────────────────────────
+    {icon} FilterEmployee
+       Time   : {sw.ElapsedMilliseconds} ms
+       Total  : {total} rows
+       Dept   : {filter.DepartmentId}
+       Page   : {paging.PageIndex} / size={paging.PageSize}
+    ───────────────────────────────────────
+    """);
+
+
+            return (total, data);
         }
     }
 }

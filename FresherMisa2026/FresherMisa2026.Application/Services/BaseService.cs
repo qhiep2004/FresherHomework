@@ -110,7 +110,13 @@ namespace FresherMisa2026.Application.Services
             {
                 //3. Xóa thành công thì làm gì
                 AfterDelete();
-                return CreateSuccessResponse(rowAffects);
+                return new ServiceResponse
+                {
+                    IsSuccess = true,
+                    Code = (int)ResponseCode.Success,
+                    Data = rowAffects,
+                    UserMessage = "xóa thành công"
+                };
             }
 
             return CreateErrorResponse(ResponseCode.NotFound, "Không tìm thấy bản ghi để xóa");
@@ -266,7 +272,13 @@ namespace FresherMisa2026.Application.Services
             if (errors.Count == 0)
             {
                 var result = await _baseRepository.InsertAsync(entity);
-                return CreateSuccessResponse(result);
+                return new ServiceResponse
+                {
+                    IsSuccess = true,
+                    Code = (int)ResponseCode.Created,  
+                    Data = result,
+                    UserMessage = "Thêm mới thành công" 
+                };
             }
 
             return CreateErrorResponse(
@@ -301,7 +313,13 @@ namespace FresherMisa2026.Application.Services
                 int rowAffects = await _baseRepository.UpdateAsync(entityId, entity);
                 if (rowAffects > 0)
                 {
-                    return CreateSuccessResponse(rowAffects);
+                    return new ServiceResponse
+                    {
+                        IsSuccess = true,
+                        Code = (int)ResponseCode.Success,
+                        Data = rowAffects,
+                        UserMessage = "Cập nhật thành công"
+                    };
                 }
                 return CreateErrorResponse(ResponseCode.NotFound, "Không tìm thấy bản ghi để cập nhật");
             }

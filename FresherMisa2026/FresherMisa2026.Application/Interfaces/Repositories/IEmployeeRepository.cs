@@ -1,3 +1,4 @@
+using FresherMisa2026.Entities;
 using FresherMisa2026.Entities.DTOs;
 using FresherMisa2026.Entities.Employee;
 using System;
@@ -31,5 +32,6 @@ namespace FresherMisa2026.Application.Interfaces.Repositories
         /// <param name="filter"></param>
         /// <returns></returns>
         Task<IEnumerable<Employee>> FilterAsync(EmployeeFilterRequest filter);
+        Task<(long Total, IEnumerable<Employee> Data)> FilterPagingAsync(PagingOnlyRequest paging, EmployeeFilterRequest filter);
     }
 }
