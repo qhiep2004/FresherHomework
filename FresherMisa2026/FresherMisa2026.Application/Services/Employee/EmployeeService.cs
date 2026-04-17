@@ -5,6 +5,7 @@ using FresherMisa2026.Entities;
 using FresherMisa2026.Entities.Department;
 using FresherMisa2026.Entities.DTOs;
 using FresherMisa2026.Entities.Employee;
+using FresherMisa2026.Entities.Enums;
 using FresherMisa2026.Entities.Position;
 using System;
 using System.Collections.Generic;
@@ -30,30 +31,74 @@ namespace FresherMisa2026.Application.Services
             _positionRepository = positionRepository;
 
         }
+        /// <summary>
+        /// lấy ds nv theo mã 
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
 
-        public async Task<Employee> GetEmployeeByCodeAsync(string code)
+        public async Task<ServiceResponse> GetEmployeeByCodeAsync(string code)
         {
             var employee = await _employeeRepository.GetEmployeeByCode(code);
             if (employee == null)
-                throw new Exception("Employee not found");
+                return CreateErrorResponse(ResponseCode.NotFound, "Không tìm thấy nhân viên với mã này");
 
-            return employee;
+            return CreateSuccessResponse(employee);
         }
-
-        public async Task<IEnumerable<Employee>> GetEmployeesByDepartmentIdAsync(Guid departmentId)
+        /// <summary>
+        /// lấy ds nv theo id phòng ban 
+        /// </summary>
+        /// <param name="departmentId"></param>
+        /// <returns></returns>
+        public async Task<ServiceResponse> GetEmployeesByDepartmentIdAsync(Guid departmentId)
         {
-            return await _employeeRepository.GetEmployeesByDepartmentId(departmentId);
-        }
+            // Validate GUID
+            if (departmentId == Guid.Empty)
+                return CreateErrorResponse(ResponseCode.BadRequest, "DepartmentId không đúng định dạng GUID");
 
-        public async Task<IEnumerable<Employee>> GetEmployeesByPositionIdAsync(Guid positionId)
-        {
-            return await _employeeRepository.GetEmployeesByPositionId(positionId);
-        }
-        public async Task<IEnumerable<Employee>> GetEmployeesByFilterAsync(EmployeeFilterRequest filter)
-        {
-            return await _employeeRepository.FilterAsync(filter);
-        }
+            var employees = await _employeeRepository.GetEmployeesByDepartmentId(departmentId);
+            if (employees == null || !employees.Any())
+                return CreateErrorResponse(ResponseCode.NotFound, "Không tìm thấy nhân viên theo phòng ban này");
 
+            return CreateSuccessResponse(employees);
+        }
+        /// <summary>
+        /// lấy ds nhân viên theo id vị trí 
+        /// </summary>
+        /// <param name="positionId"></param>
+        /// <returns></returns>
+
+        public async Task<ServiceResponse> GetEmployeesByPositionIdAsync(Guid positionId)
+        {
+            // Validate GUID
+            if (positionId == Guid.Empty)
+                return CreateErrorResponse(ResponseCode.BadRequest, "PositionId không đúng định dạng GUID");
+
+            var employees = await _employeeRepository.GetEmployeesByPositionId(positionId);
+            if (employees == null || !employees.Any())
+                return CreateErrorResponse(ResponseCode.NotFound, "Không tìm thấy nhân viên theo vị trí này");
+
+            return CreateSuccessResponse(employees);
+        }
+        /// <summary>
+        /// bộ lọc dữ liệu theo yêu cầu
+        /// </summary>
+        /// <param name="filter"></param>
+        /// <returns></returns>
+
+        public async Task<ServiceResponse> GetEmployeesByFilterAsync(EmployeeFilterRequest filter)
+        {
+            var employees = await _employeeRepository.FilterAsync(filter);
+            if (employees == null || !employees.Any())
+                return CreateErrorResponse(ResponseCode.NotFound, "Không tìm thấy nhân viên thỏa mãn điều kiện lọc");
+
+            return CreateSuccessResponse(employees);
+        }
+        /// <summary>
+        /// validate custom theo yêu cầu nghiệp vụ
+        /// </summary>
+        /// <param name="employee"></param>
+        /// <returns></returns>
         protected override async Task<List<ValidationError>> ValidateCustomAsync(Employee employee)
         {
             var errors = new List<ValidationError>();
@@ -117,7 +162,7 @@ namespace FresherMisa2026.Application.Services
             }
 
             // 6. Kiểm tra vị trí có tồn tại không
-            if (employee.PositionID != Guid.Empty)
+            if (employee.PositionID.HasValue && employee.PositionID.Value != Guid.Empty)
             {
                 var position = await _positionRepository.GetEntityByIDAsync(employee.PositionID.Value);
                 if (position == null)

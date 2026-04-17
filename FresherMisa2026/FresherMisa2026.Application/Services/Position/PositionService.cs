@@ -2,6 +2,7 @@ using FresherMisa2026.Application.Interfaces;
 using FresherMisa2026.Application.Interfaces.Repositories;
 using FresherMisa2026.Application.Interfaces.Services;
 using FresherMisa2026.Entities;
+using FresherMisa2026.Entities.Enums;
 using FresherMisa2026.Entities.Position;
 using System;
 using System.Collections.Generic;
@@ -20,13 +21,12 @@ namespace FresherMisa2026.Application.Services
             _positionRepository = positionRepository;
         }
 
-        public async Task<Position> GetPositionByCodeAsync(string code)
+        public async Task<ServiceResponse> GetPositionByCodeAsync(string code)
         {
             var position = await _positionRepository.GetPositionByCode(code);
             if (position == null)
-                throw new Exception("Position not found");
-
-            return position;
+                return CreateErrorResponse(ResponseCode.NotFound, "Không tìm thấy vị trí với mã này");
+            return CreateSuccessResponse(position);
         }
 
         protected override async Task<List<ValidationError>> ValidateCustomAsync(Position position)

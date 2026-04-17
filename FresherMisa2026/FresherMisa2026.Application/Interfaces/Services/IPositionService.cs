@@ -1,3 +1,4 @@
+using FresherMisa2026.Entities;
 using FresherMisa2026.Entities.Position;
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,6 @@ namespace FresherMisa2026.Application.Interfaces.Services
         /// </summary>
         /// <param name="code">Mã position</param>
         /// <returns>Position tìm thấy</returns>
-        Task<Position> GetPositionByCodeAsync(string code);
+        Task<ServiceResponse> GetPositionByCodeAsync(string code);
     }
 }

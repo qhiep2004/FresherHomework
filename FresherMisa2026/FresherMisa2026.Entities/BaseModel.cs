@@ -40,6 +40,6 @@ namespace FresherMisa2026.Entities
         /// <summary>
         /// Có xóa mềm hay không
         /// </summary>
-        public bool IsDeleted { get; set; }
+        //public bool IsDeleted { get; set; }
     }
 }

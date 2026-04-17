@@ -36,14 +36,15 @@ namespace FresherMisa2026.WebAPI.Controllers
         /// <param name="departmentId"></param>
         /// <returns></returns>
         [HttpGet("Department/{departmentId}")]
-        public async Task<ActionResult<ServiceResponse>> GetByDepartmentId(Guid departmentId)
+        public async Task<IActionResult> GetByDepartmentId(string departmentId)
         {
-            var response = new ServiceResponse();
-            response.Data = await _employeeService.GetEmployeesByDepartmentIdAsync(departmentId);
-            response.IsSuccess = true;
+            if (!Guid.TryParse(departmentId, out var guid))
+                return BadRequest(new { message = "departmentId không đúng định dạng GUID" });
 
-            return response;
+            var result = await _employeeService.GetEmployeesByDepartmentIdAsync(guid);
+            return Ok(result);
         }
+
         /// <summary>
         /// lấy ds nv theo id vị trí
         /// </summary>
@@ -51,13 +52,13 @@ namespace FresherMisa2026.WebAPI.Controllers
         /// <returns></returns>
 
         [HttpGet("Position/{positionId}")]
-        public async Task<ActionResult<ServiceResponse>> GetByPositionId(Guid positionId)
+        public async Task<IActionResult> GetByPositionId(string positionId)
         {
-            var response = new ServiceResponse();
-            response.Data = await _employeeService.GetEmployeesByPositionIdAsync(positionId);
-            response.IsSuccess = true;
+            if (!Guid.TryParse(positionId, out var guid))
+                return BadRequest(new { message = "positionId không đúng định dạng GUID" });
 
-            return response;
+            var result = await _employeeService.GetEmployeesByPositionIdAsync(guid);
+            return Ok(result);
         }
         /// <summary>
         /// bộ lọc dữ liệu in ra ds nv thỏa mãn các điều kiện của filter
@@ -65,12 +66,27 @@ namespace FresherMisa2026.WebAPI.Controllers
         /// <param name="filter"></param>
         /// <returns></returns>
         [HttpGet("Filter")]
-        public async Task<ActionResult<ServiceResponse>> Filter([FromQuery] EmployeeFilterRequest filter)
+        public async Task<IActionResult> Filter([FromQuery] EmployeeFilterRequest filter,
+    [FromQuery] string? departmentId,
+    [FromQuery] string? positionId)
         {
-            var response = new ServiceResponse();
-            response.Data = await _employeeService.GetEmployeesByFilterAsync(filter);
-            response.IsSuccess = true;
-            return response;
+            // Có nhập mới validate
+            if (!string.IsNullOrEmpty(departmentId))
+            {
+                if (!Guid.TryParse(departmentId, out var deptGuid))
+                    return BadRequest(new { message = "departmentId không đúng định dạng GUID" });
+                filter.DepartmentId = deptGuid;
+            }
+
+            if (!string.IsNullOrEmpty(positionId))
+            {
+                if (!Guid.TryParse(positionId, out var posGuid))
+                    return BadRequest(new { message = "positionId không đúng định dạng GUID" });
+                filter.PositionId = posGuid;
+            }
+
+            var result = await _employeeService.GetEmployeesByFilterAsync(filter);
+            return Ok(result);
         }
         /// <summary>
         /// phân trang cho bộ lọc filter

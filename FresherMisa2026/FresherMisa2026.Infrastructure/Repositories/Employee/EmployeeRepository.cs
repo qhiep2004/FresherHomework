@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using MySqlConnector;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net.NetworkInformation;
 using System.Reflection.PortableExecutable;
 
 namespace FresherMisa2026.Infrastructure.Repositories
@@ -88,6 +89,8 @@ namespace FresherMisa2026.Infrastructure.Repositories
         /// <returns></returns>
         public async Task<IEnumerable<Employee>> FilterAsync(EmployeeFilterRequest filter)
         {
+            var sw = Stopwatch.StartNew();
+
             var parameters = new DynamicParameters();
             parameters.Add("p_DepartmentId", filter.DepartmentId);
             parameters.Add("p_PositionId", filter.PositionId);
@@ -105,6 +108,17 @@ namespace FresherMisa2026.Infrastructure.Repositories
          "sp_FilterEmployee", parameters,
          commandType: System.Data.CommandType.StoredProcedure))
             {
+
+                sw.Stop();
+                // Log rõ để so sánh có/không index
+                var icon = sw.ElapsedMilliseconds < 50 ? "" : sw.ElapsedMilliseconds < 200 ? "⚠️" : "❌";
+                Console.WriteLine($"""
+    ───────────────────────────────────────
+    {icon} FilterEmployee
+       Time   : {sw.ElapsedMilliseconds} ms
+       Dept   : {filter.DepartmentId}
+    ───────────────────────────────────────
+    """);
                 return (await reader.ReadAsync<Employee>()).ToList();
             }
         }

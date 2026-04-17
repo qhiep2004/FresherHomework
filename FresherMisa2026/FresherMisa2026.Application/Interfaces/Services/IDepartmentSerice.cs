@@ -1,4 +1,5 @@
-﻿using FresherMisa2026.Entities.Department;
+﻿using FresherMisa2026.Entities;
+using FresherMisa2026.Entities.Department;
 using FresherMisa2026.Entities.Employee;
 using System;
 using System.Collections.Generic;
@@ -13,13 +14,13 @@ namespace FresherMisa2026.Application.Interfaces.Services
         /// </summary>
         /// <returns></returns>
         /// Created By: dvhai (10/04/2026)
-        Task<Department> GetDepartmentByCodeAsync(string code);
+        Task<ServiceResponse> GetDepartmentByCodeAsync(string code);
         /// <summary>
         /// lấy ds nhân viên theo code phòng ban
         /// </summary>
         /// <param name="code"></param>
         /// <returns></returns>
-        Task<IEnumerable<Employee>> GetEmployeesByDepartmentCode(string code);
+        Task<ServiceResponse> GetEmployeesByDepartmentCode(string code); 
         /// <summary>
         /// đếm sl nhân viên trong phòng ban theo mã phòng ban
         /// </summary>

@@ -265,9 +265,10 @@ namespace FresherMisa2026.Infrastructure.Repositories
             await using var transaction = await conn.BeginTransactionAsync();
             try
             {
-                var parameters = MappingDbType(entity);
+              
                 var keyName = _modelType.GetKeyName();
                 entity.GetType().GetProperty(keyName)!.SetValue(entity, entityId);
+                var parameters = MappingDbType(entity);
 
                 var rowAffects = await conn.ExecuteAsync(
                     $"Proc_Update{_tableName}",
