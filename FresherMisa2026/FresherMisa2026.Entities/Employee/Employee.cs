@@ -72,9 +72,13 @@ namespace FresherMisa2026.Entities.Employee
 
         public decimal? Salary { get; set; }
         /// <summary>
-        /// ngày vào 
+        /// ngày tạo
         /// </summary>
 
         public DateTime? CreatedDate { get; set; }
+        /// <summary>
+        /// ngày vào làm
+        /// </summary>
+        public DateTime? HireDate { get; set; }
     }
 }

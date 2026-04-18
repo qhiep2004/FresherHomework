@@ -66,26 +66,32 @@ namespace FresherMisa2026.WebAPI.Controllers
         /// <param name="filter"></param>
         /// <returns></returns>
         [HttpGet("Filter")]
-        public async Task<IActionResult> Filter([FromQuery] EmployeeFilterRequest filter,
-    [FromQuery] string? departmentId,
-    [FromQuery] string? positionId)
+        public async Task<IActionResult> Filter(
+     [FromQuery] EmployeeFilterRequest filter)
         {
-            // Có nhập mới validate
-            if (!string.IsNullOrEmpty(departmentId))
+            // Validate DepartmentId
+            if (filter.DepartmentId.HasValue &&
+                filter.DepartmentId.Value == Guid.Empty)
             {
-                if (!Guid.TryParse(departmentId, out var deptGuid))
-                    return BadRequest(new { message = "departmentId không đúng định dạng GUID" });
-                filter.DepartmentId = deptGuid;
+                return BadRequest(new
+                {
+                    message = "departmentId không đúng định dạng GUID"
+                });
             }
 
-            if (!string.IsNullOrEmpty(positionId))
+            // Validate PositionId
+            if (filter.PositionId.HasValue &&
+                filter.PositionId.Value == Guid.Empty)
             {
-                if (!Guid.TryParse(positionId, out var posGuid))
-                    return BadRequest(new { message = "positionId không đúng định dạng GUID" });
-                filter.PositionId = posGuid;
+                return BadRequest(new
+                {
+                    message = "positionId không đúng định dạng GUID"
+                });
             }
 
-            var result = await _employeeService.GetEmployeesByFilterAsync(filter);
+            var result =
+                await _employeeService.GetEmployeesByFilterAsync(filter);
+
             return Ok(result);
         }
         /// <summary>

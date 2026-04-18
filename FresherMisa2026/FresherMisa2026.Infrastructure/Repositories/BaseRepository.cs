@@ -176,7 +176,8 @@ namespace FresherMisa2026.Infrastructure.Repositories
 
             await using var conn = CreateConnection();
             var result = await conn.QueryFirstOrDefaultAsync<TEntity>(
-                query.ToString(), new { Id = id }, commandType: CommandType.Text);
+                query.ToString(), new { Id = id }   //parameter
+                , commandType: CommandType.Text);
 
             if (result != null)
                 _cache.Set(cacheKey, result, CacheDuration);
@@ -235,7 +236,7 @@ namespace FresherMisa2026.Infrastructure.Repositories
                 var parameters = MappingDbType(entity);
 
                 var rowAffects = await conn.ExecuteAsync(
-                    $"Proc_Insert{_tableName}",
+ $"Proc_Insert{_tableName}",
                     param: parameters,
                     transaction: transaction,
                     commandType: CommandType.StoredProcedure);
